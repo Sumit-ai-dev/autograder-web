@@ -1,7 +1,9 @@
+import { tableFromLists } from './table.js';
+
 // Shared render helpers for code analysis result visualizations.
 // Used by both individual.js and pairwise.js.
 
-// ─── Utility Helpers ────────────────────────────────────────────────────────
+// Utility helpers.
 
 function escapeHTML(str) {
     if (str === null || str === undefined) {
@@ -40,7 +42,7 @@ function msToSeconds(ms) {
     return formatNumber(ms / 1000) + 's';
 }
 
-// ─── Visual Render Helpers ───────────────────────────────────────────────────
+// Visual render helpers.
 
 // Renders a horizontal progress bar.
 // maxValue should come from summary aggregate max — never hardcoded.
@@ -81,18 +83,18 @@ function similarityBar(score) {
     `;
 }
 
-// Renders cells: count | mean | median | min | max from an aggregate object.
-function aggregateCells(aggregate) {
+// Converts an aggregate object to an array of formatted strings for tableFromLists.
+function aggregateToRow(aggregate) {
     if (!aggregate) {
-        return `<td colspan='5'>-</td>`;
+        return ['-', '-', '-', '-', '-'];
     }
-    return `
-        <td>${formatNumber(aggregate['count'], 0)}</td>
-        <td>${formatNumber(aggregate['mean'])}</td>
-        <td>${formatNumber(aggregate['median'])}</td>
-        <td>${formatNumber(aggregate['min'])}</td>
-        <td>${formatNumber(aggregate['max'])}</td>
-    `;
+    return [
+        formatNumber(aggregate['count'], 0),
+        formatNumber(aggregate['mean']),
+        formatNumber(aggregate['median']),
+        formatNumber(aggregate['min']),
+        formatNumber(aggregate['max']),
+    ];
 }
 
 // Returns styled pending/empty state paragraph.
@@ -121,7 +123,7 @@ function rawJsonFallback(result) {
     `;
 }
 
-// ─── Individual Analysis Sections ────────────────────────────────────────────
+// Individual analysis sections.
 
 function renderIndividualAnalysis(result) {
     const summary = result['summary'];
@@ -132,22 +134,12 @@ function renderIndividualAnalysis(result) {
 
     // Pending banner.
     if (!isComplete) {
-        html += `<p class='analysis-pending'>⏳ Analysis is still running. Showing partial data.</p>`;
+        html += `<p class='analysis-pending'>Analysis is still running. Showing partial data.</p>`;
     }
 
-    // --- Section A: Summary Stats ---
-    const aggregateHeaders = `
-        <tr>
-            <th>Metric</th>
-            <th>Count</th>
-            <th>Mean</th>
-            <th>Median</th>
-            <th>Min</th>
-            <th>Max</th>
-        </tr>
-    `;
-
-    const summaryRows = [
+    // Summary stats.
+    const headers = ['Metric', 'Count', 'Mean', 'Median', 'Min', 'Max'];
+    const summaryItems = [
         ['Score',         summary['aggregate-score']],
         ['Lines of Code', summary['aggregate-lines-of-code']],
         ['Time Delta',    summary['aggregate-submission-time-delta']],
@@ -155,40 +147,28 @@ function renderIndividualAnalysis(result) {
         ['Score Delta',   summary['aggregate-score-delta']],
         ['LOC / hr (Velocity)',   summary['aggregate-lines-of-code-per-hour']],
         ['Score / hr (Velocity)', summary['aggregate-score-per-hour']],
-    ].map(([label, agg]) => `
-        <tr>
-            <th class='label'>${escapeHTML(label)}</th>
-            ${aggregateCells(agg)}
-        </tr>
-    `).join('');
+    ];
 
-    let summaryHTML = `
-        <table class='standard-table analysis-summary-table'>
-            <thead>${aggregateHeaders}</thead>
-            <tbody>${summaryRows}</tbody>
-        </table>
-    `;
+    const summaryRows = summaryItems.map(function(item) {
+        const row = [escapeHTML(item[0])];
+        return row.concat(aggregateToRow(item[1]));
+    });
+
+    let summaryHTML = tableFromLists(headers, summaryRows, ['analysis-summary-table']);
 
     // Per-file LOC sub-table.
     const locPerFile = summary['aggregate-lines-of-code-per-file'];
     if (locPerFile) {
-        const fileRows = Object.keys(locPerFile).sort().map((filename) => `
-            <tr>
-                <td>${escapeHTML(filename)}</td>
-                ${aggregateCells(locPerFile[filename])}
-            </tr>
-        `).join('');
+        const fileNames = Object.keys(locPerFile).sort();
+        const fileRows = fileNames.map(function(filename) {
+            const row = [escapeHTML(filename)];
+            return row.concat(aggregateToRow(locPerFile[filename]));
+        });
 
+        const fileHeaders = ['File', 'Count', 'Mean', 'Median', 'Min', 'Max'];
         summaryHTML += `
-            <h4 style='margin-top:1em;margin-bottom:0.5em;'>Lines of Code per File</h4>
-            <table class='standard-table analysis-loc-per-file-table'>
-                <thead>
-                    <tr>
-                        <th>File</th><th>Count</th><th>Mean</th><th>Median</th><th>Min</th><th>Max</th>
-                    </tr>
-                </thead>
-                <tbody>${fileRows}</tbody>
-            </table>
+            <h4 class='analysis-loc-header'>Lines of Code per File</h4>
+            ${tableFromLists(fileHeaders, fileRows, ['analysis-loc-per-file-table'])}
         `;
     } else {
         summaryHTML += pendingState('Per-file LOC breakdown not yet available.');
@@ -196,7 +176,7 @@ function renderIndividualAnalysis(result) {
 
     html += analysisSection('Summary Statistics', summaryHTML);
 
-    // --- Section B: Per-Submission Table ---
+    // Per-submission table.
     const dynamicMax = summary['aggregate-score']?.['max'] ?? 1;
     const submissionIDs = Object.keys(results).sort();
 
@@ -204,58 +184,39 @@ function renderIndividualAnalysis(result) {
     if (submissionIDs.length === 0) {
         resultsHTML = pendingState('No individual results yet.');
     } else {
-        const rows = submissionIDs.map((id) => {
+        const resHeaders = [
+            'Submission ID', 'Score', 'LOC', 'Time Delta', 'LOC Delta',
+            'Score Delta', 'LOC / hr', 'Score / hr'
+        ];
+
+        const rows = submissionIDs.map(function(id) {
             const r = results[id];
-            const score      = r['score']                 ?? null;
-            const loc        = r['lines-of-code']         ?? null;
-            const timeDelta  = r['submission-time-delta'] ?? null;
-            const locDelta   = r['lines-of-code-delta']   ?? null;
-            const scoreDelta = r['score-delta']           ?? null;
-            const locPerHr   = r['lines-of-code-per-hour'] ?? null;
-            const scorePerHr = r['score-per-hour']        ?? null;
+            const shortId = escapeHTML(r['short-id'] ?? id);
 
-            return `
-                <tr>
-                    <td title='${escapeHTML(id)}'>${escapeHTML(r['short-id'] ?? id)}</td>
-                    <td>${scoreBar(score, dynamicMax)}</td>
-                    <td>${formatNumber(loc, 0)}</td>
-                    <td>${msToSeconds(timeDelta)}</td>
-                    <td>${formatNumber(locDelta, 0)}</td>
-                    <td>${formatNumber(scoreDelta)}</td>
-                    <td>${formatNumber(locPerHr)}</td>
-                    <td>${formatNumber(scorePerHr)}</td>
-                </tr>
-            `;
-        }).join('');
+            return [
+                `<span title='${escapeHTML(id)}'>${shortId}</span>`,
+                scoreBar(r['score'] ?? null, dynamicMax),
+                formatNumber(r['lines-of-code'] ?? null, 0),
+                msToSeconds(r['submission-time-delta'] ?? null),
+                formatNumber(r['lines-of-code-delta'] ?? null, 0),
+                formatNumber(r['score-delta'] ?? null),
+                formatNumber(r['lines-of-code-per-hour'] ?? null),
+                formatNumber(r['score-per-hour'] ?? null)
+            ];
+        });
 
-        resultsHTML = `
-            <table class='standard-table analysis-results-table'>
-                <thead>
-                    <tr>
-                        <th>Submission ID</th>
-                        <th>Score</th>
-                        <th>LOC</th>
-                        <th>Time Δ</th>
-                        <th>LOC Δ</th>
-                        <th>Score Δ</th>
-                        <th>LOC / hr</th>
-                        <th>Score / hr</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-        `;
+        resultsHTML = tableFromLists(resHeaders, rows, ['analysis-results-table']);
     }
 
     html += analysisSection('Per-Submission Results', resultsHTML);
 
-    // --- Raw JSON Fallback ---
+    // Raw JSON fallback.
     html += rawJsonFallback(result);
 
     return html;
 }
 
-// ─── Pairwise Analysis Sections ──────────────────────────────────────────────
+// Pairwise analysis sections.
 
 function renderPairwiseAnalysis(result) {
     const summary = result['summary'];
@@ -265,13 +226,13 @@ function renderPairwiseAnalysis(result) {
     let html = '';
 
     if (!isComplete) {
-        html += `<p class='analysis-pending'>⏳ Analysis is still running. Showing partial data.</p>`;
+        html += `<p class='analysis-pending'>Analysis is still running. Showing partial data.</p>`;
     }
 
-    // --- Section A: Summary ---
+    // Similarity summary.
     const totalMean = summary['aggregate-total-mean-similarity'];
     let summaryHTML = `
-        <div style='margin-bottom:1em;'>
+        <div class='pairwise-overall-summary'>
             <strong>Overall Mean Similarity:</strong>
             ${similarityBar(totalMean?.['mean'] ?? null)}
         </div>
@@ -279,95 +240,80 @@ function renderPairwiseAnalysis(result) {
 
     const meanSims = summary['aggregate-mean-similarities'];
     if (meanSims) {
-        const fileRows = Object.keys(meanSims).sort().map((filename) => `
-            <tr>
-                <td>${escapeHTML(filename)}</td>
-                ${aggregateCells(meanSims[filename])}
-            </tr>
-        `).join('');
+        const fileNames = Object.keys(meanSims).sort();
+        const headers = ['File', 'Count', 'Mean', 'Median', 'Min', 'Max'];
+        
+        const fileRows = fileNames.map(function(filename) {
+            const row = [escapeHTML(filename)];
+            return row.concat(aggregateToRow(meanSims[filename]));
+        });
 
-        summaryHTML += `
-            <table class='standard-table pairwise-summary'>
-                <thead>
-                    <tr>
-                        <th>File</th><th>Count</th><th>Mean</th><th>Median</th><th>Min</th><th>Max</th>
-                    </tr>
-                </thead>
-                <tbody>${fileRows}</tbody>
-            </table>
-        `;
+        summaryHTML += tableFromLists(headers, fileRows, ['pairwise-summary']);
     } else {
         summaryHTML += pendingState('Per-file similarity summary not yet available.');
     }
 
     html += analysisSection('Similarity Summary', summaryHTML);
 
-    // --- Section B: Per-Pair Flattened Table ---
+    // Per-pair flattened table.
     const pairKeys = Object.keys(results).sort();
     let pairsHTML = '';
 
     if (pairKeys.length === 0) {
         pairsHTML = pendingState('No pairwise results yet.');
     } else {
-        let rows = '';
-        for (const pairKey of pairKeys) {
+        const resHeaders = ['Pair (short IDs)', 'File', 'Tool', 'Similarity'];
+        let rows = [];
+
+        for (let i = 0; i < pairKeys.length; i++) {
+            const pairKey = pairKeys[i];
             const pair = results[pairKey];
             const sims = pair['similarities'] ?? {};
             const fileNames = Object.keys(sims).sort();
 
             // Shorten pair key for display — keep only short IDs.
             const parts = pairKey.split('||');
-            const shortDisplay = parts.map((p) => {
+            const shortDisplay = parts.map(function(p) {
                 const segs = p.split('::');
                 return segs[segs.length - 1] ?? p;
             }).join(' || ');
 
+            const shortSpan = `<span title='${escapeHTML(pairKey)}'>${escapeHTML(shortDisplay)}</span>`;
+
             let pairHasRows = false;
-            for (const filename of fileNames) {
+            for (let j = 0; j < fileNames.length; j++) {
+                const filename = fileNames[j];
                 const toolEntries = sims[filename] ?? [];
-                for (const entry of toolEntries) {
-                    const score = entry['score'] ?? null;
-                    rows += `
-                        <tr>
-                            <td title='${escapeHTML(pairKey)}'>${escapeHTML(shortDisplay)}</td>
-                            <td>${escapeHTML(filename)}</td>
-                            <td>${escapeHTML(entry['tool'] ?? '-')}</td>
-                            <td>${similarityBar(score)}</td>
-                        </tr>
-                    `;
+                
+                for (let k = 0; k < toolEntries.length; k++) {
+                    const entry = toolEntries[k];
+                    rows.push([
+                        shortSpan,
+                        escapeHTML(filename),
+                        escapeHTML(entry['tool'] ?? '-'),
+                        similarityBar(entry['score'] ?? null)
+                    ]);
                     pairHasRows = true;
                 }
             }
 
             // Fallback: no files at all, OR files exist but all tool entry arrays were empty.
             if (!pairHasRows) {
-                rows += `
-                    <tr>
-                        <td title='${escapeHTML(pairKey)}'>${escapeHTML(shortDisplay)}</td>
-                        <td colspan='3'>${pendingState('No tool results available.')}</td>
-                    </tr>
-                `;
+                rows.push([
+                    shortSpan,
+                    pendingState('No tool results available.'),
+                    '-',
+                    '-'
+                ]);
             }
         }
 
-        pairsHTML = `
-            <table class='standard-table pairwise-pairs-table'>
-                <thead>
-                    <tr>
-                        <th>Pair (short IDs)</th>
-                        <th>File</th>
-                        <th>Tool</th>
-                        <th>Similarity</th>
-                    </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-            </table>
-        `;
+        pairsHTML = tableFromLists(resHeaders, rows, ['pairwise-pairs-table']);
     }
 
     html += analysisSection('Per-Pair Comparisons', pairsHTML);
 
-    // --- Raw JSON Fallback ---
+    // Raw JSON fallback.
     html += rawJsonFallback(result);
 
     return html;
@@ -380,7 +326,7 @@ export {
     msToSeconds,
     scoreBar,
     similarityBar,
-    aggregateCells,
+    aggregateToRow,
     pendingState,
     analysisSection,
     rawJsonFallback,

@@ -1296,6 +1296,15 @@ table.standard-table tr:not(:last-child) {
     background-color: #f44336;
 }
 
+.analysis-loc-header {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+}
+
+.pairwise-overall-summary {
+    margin-bottom: 1em;
+}
+
 details.raw-json-fallback {
     margin-top: 1.5em;
 }
@@ -1315,11 +1324,6 @@ details.raw-json-fallback pre {
     margin-top: 0.5em;
     overflow-x: auto;
     font-size: var(--font-size-smaller);
-}
-
-table.analysis-summary-table th.label {
-    text-align: left;
-    font-weight: var(--font-weight-bold);
 }
 
 table.analysis-results-table td,
