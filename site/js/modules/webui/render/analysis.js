@@ -32,7 +32,11 @@ function formatPercent(value) {
     if (value === null || value === undefined) {
         return '-';
     }
-    return formatNumber(value * 100, 1) + '%';
+    const formatted = formatNumber(value * 100, 1);
+    if (formatted === '-') {
+        return '-';
+    }
+    return formatted + '%';
 }
 
 function msToSeconds(ms) {
@@ -45,7 +49,7 @@ function msToSeconds(ms) {
 // Visual render helpers.
 
 // Renders a horizontal progress bar.
-// maxValue should come from summary aggregate max — never hardcoded.
+// maxValue should come from summary aggregate max -- never hardcoded.
 function scoreBar(value, maxValue) {
     if (value === null || value === undefined || !maxValue || maxValue === 0) {
         return `<span>-</span>`;
@@ -242,7 +246,7 @@ function renderPairwiseAnalysis(result) {
     if (meanSims) {
         const fileNames = Object.keys(meanSims).sort();
         const headers = ['File', 'Count', 'Mean', 'Median', 'Min', 'Max'];
-        
+
         const fileRows = fileNames.map(function(filename) {
             const row = [escapeHTML(filename)];
             return row.concat(aggregateToRow(meanSims[filename]));
@@ -271,7 +275,7 @@ function renderPairwiseAnalysis(result) {
             const sims = pair['similarities'] ?? {};
             const fileNames = Object.keys(sims).sort();
 
-            // Shorten pair key for display — keep only short IDs.
+            // Shorten pair key for display -- keep only short IDs.
             const parts = pairKey.split('||');
             const shortDisplay = parts.map(function(p) {
                 const segs = p.split('::');
@@ -284,7 +288,7 @@ function renderPairwiseAnalysis(result) {
             for (let j = 0; j < fileNames.length; j++) {
                 const filename = fileNames[j];
                 const toolEntries = sims[filename] ?? [];
-                
+
                 for (let k = 0; k < toolEntries.length; k++) {
                     const entry = toolEntries[k];
                     rows.push([
