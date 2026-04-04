@@ -27,6 +27,6 @@ test('Pairwise Analysis', async function() {
     expect(resultsArea.querySelector('.analysis-section')).not.toBeNull();
     expect(resultsArea.querySelector('.pairwise-summary')).not.toBeNull();
     expect(resultsArea.querySelector('.pairwise-pairs-table')).not.toBeNull();
-    expect(resultsArea.querySelector('details.raw-json-fallback')).not.toBeNull();
-    expect(resultsArea.querySelector('details.raw-json-fallback summary').textContent).toContain('Raw JSON');
+    expect(resultsArea.querySelector('details.analysis-raw-json')).not.toBeNull();
+    expect(resultsArea.querySelector('details.analysis-raw-json summary').textContent).toContain('Raw JSON');
 });

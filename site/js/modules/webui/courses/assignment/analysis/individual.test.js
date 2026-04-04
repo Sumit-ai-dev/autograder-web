@@ -27,6 +27,6 @@ test('Individual Analysis', async function() {
     expect(resultsArea.querySelector('.analysis-section')).not.toBeNull();
     expect(resultsArea.querySelector('.analysis-summary-table')).not.toBeNull();
     expect(resultsArea.querySelector('.analysis-results-table')).not.toBeNull();
-    expect(resultsArea.querySelector('details.raw-json-fallback')).not.toBeNull();
-    expect(resultsArea.querySelector('details.raw-json-fallback summary').textContent).toContain('Raw JSON');
+    expect(resultsArea.querySelector('details.analysis-raw-json')).not.toBeNull();
+    expect(resultsArea.querySelector('details.analysis-raw-json summary').textContent).toContain('Raw JSON');
 });

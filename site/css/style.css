@@ -1239,8 +1239,6 @@ table.standard-table tr:not(:last-child) {
     align-items: center;
 }
 
-/* ===== Code Analysis GUI (Issue #142) ===== */
-
 .analysis-section {
     margin-bottom: 1.5em;
 }
@@ -1257,43 +1255,6 @@ table.standard-table tr:not(:last-child) {
 
 .analysis-pending {
     color: var(--color-text-secondary-low);
-    font-style: italic;
-    margin-left: 1em;
-}
-
-.score-bar-container {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5em;
-    min-width: 130px;
-}
-
-.score-bar-track {
-    flex-grow: 1;
-    height: 0.6em;
-    background-color: var(--color-bg-secondary-low);
-    border-radius: var(--curve-radius-large);
-    overflow: hidden;
-}
-
-.score-bar-fill {
-    height: 100%;
-    background-color: var(--color-bg-accent-primary);
-    border-radius: var(--curve-radius-large);
-    transition: width 0.3s ease;
-}
-
-.score-bar-fill.similarity-low {
-    background-color: #4caf50;
-}
-
-.score-bar-fill.similarity-mid {
-    background-color: #ff9800;
-}
-
-.score-bar-fill.similarity-high {
-    background-color: #f44336;
 }
 
 .analysis-loc-header {
@@ -1305,28 +1266,16 @@ table.standard-table tr:not(:last-child) {
     margin-bottom: 1em;
 }
 
-details.raw-json-fallback {
+.analysis-raw-json {
     margin-top: 1.5em;
 }
 
-details.raw-json-fallback summary {
+.analysis-raw-json summary {
     cursor: pointer;
     color: var(--color-text-secondary-low);
     font-size: var(--font-size-smaller);
-    user-select: none;
 }
 
-details.raw-json-fallback summary:hover {
+.analysis-raw-json summary:hover {
     color: var(--color-text-secondary);
-}
-
-details.raw-json-fallback pre {
-    margin-top: 0.5em;
-    overflow-x: auto;
-    font-size: var(--font-size-smaller);
-}
-
-table.analysis-results-table td,
-table.pairwise-pairs-table td {
-    vertical-align: middle;
 }
